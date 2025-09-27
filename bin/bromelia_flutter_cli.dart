@@ -7,9 +7,9 @@ import 'package:path/path.dart' as path;
 class ProjectCreationException implements Exception {
   final String message;
   final String suggestion;
-  
+
   ProjectCreationException(this.message, this.suggestion);
-  
+
   @override
   String toString() => message;
 }
@@ -100,11 +100,10 @@ class TemplateProcessor {
     required this.organization,
     required this.platforms,
   });
-
   Future<bool> processTemplate(String destinationPath) async {
     final destinationDir = Directory(destinationPath);
     final progress = ProgressIndicator();
-    
+
     try {
       final templateDir = Directory(templatePath);
       if (!await templateDir.exists()) {
@@ -122,12 +121,12 @@ class TemplateProcessor {
       // Step 1: Check Flutter installation
       await _checkFlutterInstallation();
 
-      // Step 2: Create project directory and copy template files
+      // Step 2: Generate Flutter files
       await destinationDir.create(recursive: true);
-      await _copyEssentialFiles(templateDir, destinationDir);
-
-      // Step 3: Generate Flutter files
       await _executeFlutterCreate(destinationDir);
+
+      // Step 3: Copy template files over the generated project
+      await _copyEssentialFiles(templateDir, destinationDir);
 
       // Step 4: Apply template customizations
       await _applyTemplateCustomizations(destinationDir);
@@ -140,11 +139,10 @@ class TemplateProcessor {
 
       progress.stop();
       return true;
-      
     } catch (e) {
       progress.stop(success: false);
-      Logger.error('Project creation failed: ${e.toString()}');
-      
+      Logger.error('Failed to create project: ${e.toString()}');
+
       // Clean up on failure
       await _cleanupOnFailure(destinationDir);
       return false;
@@ -154,18 +152,18 @@ class TemplateProcessor {
   Future<void> _checkFlutterInstallation() async {
     try {
       final result = await Process.run('flutter', ['--version'], runInShell: true);
-      
+
       if (result.exitCode != 0) {
         throw ProjectCreationException(
           'Flutter not found in PATH',
-          'Please install Flutter and ensure it\'s in your PATH.\nVisit: https://flutter.dev/docs/get-started/install'
+          'Please install Flutter and ensure it\'s in your PATH.\nVisit: https://flutter.dev/docs/get-started/install',
         );
       }
     } catch (e) {
       if (e is ProjectCreationException) rethrow;
       throw ProjectCreationException(
         'Flutter CLI not accessible',
-        'Please install Flutter and ensure it\'s in your PATH.\nVisit: https://flutter.dev/docs/get-started/install'
+        'Please install Flutter and ensure it\'s in your PATH.\nVisit: https://flutter.dev/docs/get-started/install',
       );
     }
   }
@@ -177,8 +175,8 @@ class TemplateProcessor {
         '--org=$organization',
         '--project-name=$projectName',
         ...platforms.map((p) => '--platforms=$p'),
-        '--overwrite',
-        '.'
+        '.',
+        '-e',
       ];
 
       final result = await Process.run(
@@ -191,38 +189,30 @@ class TemplateProcessor {
       if (result.exitCode != 0) {
         throw ProjectCreationException(
           'Flutter create command failed',
-          'Try running: flutter create --help\nEnsure project name is valid and Flutter is properly installed.\nError: ${result.stderr}'
+          'Try running: flutter create --help\nEnsure project name is valid and Flutter is properly installed.\nError: ${result.stderr}',
         );
       }
     } catch (e) {
       if (e is ProjectCreationException) rethrow;
-      throw ProjectCreationException(
-        'Failed to execute flutter create',
-        'Ensure Flutter is properly installed and accessible.\nTry running: flutter doctor'
-      );
+      throw ProjectCreationException('Failed to execute flutter create', 'Ensure Flutter is properly installed and accessible.\nTry running: flutter doctor');
     }
   }
 
   Future<void> _executeFlutterPubGet(Directory projectDir) async {
     try {
-      final result = await Process.run(
-        'flutter',
-        ['pub', 'get'],
-        workingDirectory: projectDir.path,
-        runInShell: true,
-      );
+      final result = await Process.run('flutter', ['pub', 'get'], workingDirectory: projectDir.path, runInShell: true);
 
       if (result.exitCode != 0) {
         throw ProjectCreationException(
           'Flutter pub get failed',
-          'Check your pubspec.yaml for dependency conflicts.\nTry running: flutter pub deps\nError: ${result.stderr}'
+          'Check your pubspec.yaml for dependency conflicts.\nTry running: flutter pub deps\nError: ${result.stderr}',
         );
       }
     } catch (e) {
       if (e is ProjectCreationException) rethrow;
       throw ProjectCreationException(
         'Failed to run flutter pub get',
-        'Check your internet connection and pubspec.yaml dependencies.\nTry running: flutter pub get manually'
+        'Check your internet connection and pubspec.yaml dependencies.\nTry running: flutter pub get manually',
       );
     }
   }
@@ -249,14 +239,14 @@ class TemplateProcessor {
       if (result.exitCode != 0) {
         throw ProjectCreationException(
           'Build runner execution failed',
-          'Ensure build_runner is properly configured in pubspec.yaml.\nTry running: dart run build_runner clean first\nError: ${result.stderr}'
+          'Ensure build_runner is properly configured in pubspec.yaml.\nTry running: dart run build_runner clean first\nError: ${result.stderr}',
         );
       }
     } catch (e) {
       if (e is ProjectCreationException) rethrow;
       throw ProjectCreationException(
         'Failed to run build_runner',
-        'Check if build_runner is properly configured.\nTry running: dart run build_runner build --help'
+        'Check if build_runner is properly configured.\nTry running: dart run build_runner build --help',
       );
     }
   }
@@ -275,27 +265,37 @@ class TemplateProcessor {
   Future<void> _copyEssentialFiles(Directory source, Directory destination) async {
     try {
       // Define files and folders to copy from template
-      final essentialItems = ['lib', 'assets', 'fonts', 'pubspec.yaml', 'analysis_options.yaml'];
+      final essentialItems = [
+        'lib',
+        'assets',
+        'fonts',
+        'pubspec.yaml',
+        'analysis_options.yaml',
+        'README.md',
+      ];
 
       for (final item in essentialItems) {
         final sourcePath = path.join(source.path, item);
-        final sourceFile = File(sourcePath);
-        final sourceDir = Directory(sourcePath);
+        final destinationPath = path.join(destination.path, item);
 
-        if (await sourceFile.exists()) {
-          // Copy file
-          final destFile = File(path.join(destination.path, item));
-          await sourceFile.copy(destFile.path);
-        } else if (await sourceDir.exists()) {
-          // Copy directory recursively
-          final destDir = Directory(path.join(destination.path, item));
-          await _copyDirectoryRecursive(sourceDir, destDir);
+        // Delete existing destination before copying
+        if (await Directory(destinationPath).exists()) {
+          await Directory(destinationPath).delete(recursive: true);
+        } else if (await File(destinationPath).exists()) {
+          await File(destinationPath).delete();
+        }
+
+        // Now copy from template
+        if (await File(sourcePath).exists()) {
+          await File(sourcePath).copy(destinationPath);
+        } else if (await Directory(sourcePath).exists()) {
+          await _copyDirectoryRecursive(Directory(sourcePath), Directory(destinationPath));
         }
       }
     } catch (e) {
       throw ProjectCreationException(
         'Failed to copy template files',
-        'Check template directory permissions and file structure.\nEnsure template files are accessible.'
+        'Check template directory permissions and file structure.\nEnsure template files are accessible.',
       );
     }
   }
@@ -316,7 +316,6 @@ class TemplateProcessor {
     }
   }
 
-
   Future<void> _applyTemplateCustomizations(Directory projectDir) async {
     try {
       // Process template variables in the copied files
@@ -324,21 +323,18 @@ class TemplateProcessor {
     } catch (e) {
       throw ProjectCreationException(
         'Failed to apply template customizations',
-        'Check template variable syntax and file permissions.\nEnsure template files contain valid {{VARIABLE}} syntax.'
+        'Check template variable syntax and file permissions.\nEnsure template files contain valid {{VARIABLE}} syntax.',
       );
     }
   }
 
   Future<void> _processTemplateFiles(Directory projectDir) async {
     // Only process files in lib/, assets/, fonts/, and root config files
-    final filesToProcess = [
-      path.join(projectDir.path, 'pubspec.yaml'),
-      path.join(projectDir.path, 'analysis_options.yaml'),
-    ];
+    final filesToProcess = [path.join(projectDir.path, 'pubspec.yaml'), path.join(projectDir.path, 'analysis_options.yaml')];
 
     // Process lib/ directory
     await _processDirectoryFiles(Directory(path.join(projectDir.path, 'lib')));
-    
+
     // Process assets/ directory if exists
     final assetsDir = Directory(path.join(projectDir.path, 'assets'));
     if (await assetsDir.exists()) {
@@ -378,7 +374,7 @@ class TemplateProcessor {
   Future<void> _processFile(File file) async {
     try {
       String content = await file.readAsString();
-      
+
       // Replace template variables
       content = content
           .replaceAll('{{PROJECT_NAME}}', projectName)
@@ -400,7 +396,7 @@ class TemplateProcessor {
 // Main CLI class
 class BromeliaCli {
   static const String version = '1.0.0';
-  
+
   static Future<void> run(List<String> arguments) async {
     final parser = ArgParser()
       ..addCommand('create')
@@ -409,14 +405,8 @@ class BromeliaCli {
 
     // Setup create command
     final createCommand = parser.commands['create']!
-      ..addOption('org', 
-          abbr: 'o',
-          help: 'Organization domain (e.g., com.example)',
-          mandatory: true)
-      ..addOption('platforms',
-          abbr: 'p',
-          help: 'Target platforms (comma-separated: android,ios,web,windows,macos,linux)',
-          defaultsTo: '')
+      ..addOption('org', abbr: 'o', help: 'Organization domain (e.g., com.example)', mandatory: true)
+      ..addOption('platforms', abbr: 'p', help: 'Target platforms (comma-separated: android,ios,web,windows,macos,linux)', defaultsTo: '')
       ..addFlag('help', abbr: 'h', help: 'Show help for create command');
 
     try {
@@ -467,9 +457,9 @@ class BromeliaCli {
     final projectName = results.rest.first;
     final organization = results['org'] as String;
     final platformsString = results['platforms'] as String;
-    
+
     // If no platforms specified, use all platforms
-    final platforms = platformsString.isEmpty 
+    final platforms = platformsString.isEmpty
         ? ['android', 'ios', 'web', 'windows', 'macos', 'linux']
         : platformsString.split(',').map((p) => p.trim()).toList();
 
@@ -490,7 +480,7 @@ class BromeliaCli {
     // Validate platforms
     final validPlatforms = ['android', 'ios', 'web', 'windows', 'macos', 'linux'];
     final invalidPlatforms = platforms.where((p) => !validPlatforms.contains(p)).toList();
-    
+
     if (invalidPlatforms.isNotEmpty) {
       Logger.error('Invalid platforms: ${invalidPlatforms.join(', ')}');
       Logger.info('Valid platforms: ${validPlatforms.join(', ')}');
@@ -510,15 +500,10 @@ class BromeliaCli {
       // Get template path (absolute path to template folder in CLI project)
       final scriptPath = Platform.script.toFilePath();
       final cliDir = Directory(scriptPath).parent.parent.path; // Go up from bin/ to project root
-      final templatePath = path.join(cliDir, 'template');
+      final templatePath = path.join(cliDir, 'template', 'flutter_app');
       final destinationPath = path.join(Directory.current.path, projectName);
 
-      final processor = TemplateProcessor(
-        templatePath: templatePath,
-        projectName: projectName,
-        organization: organization,
-        platforms: platforms,
-      );
+      final processor = TemplateProcessor(templatePath: templatePath, projectName: projectName, organization: organization, platforms: platforms);
 
       final success = await processor.processTemplate(destinationPath);
 
