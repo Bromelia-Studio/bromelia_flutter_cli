@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/home/presentation/pages/home_page.dart';
 
+
 final router = GoRouter(
   initialLocation: HomePage.route,
   routes: <RouteBase>[
