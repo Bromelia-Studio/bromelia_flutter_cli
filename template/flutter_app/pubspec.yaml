@@ -15,6 +15,7 @@ dependencies:
 
   go_router: ^16.2.4
   theme_tailor_annotation: ^3.1.1
+  responsive_builder: ^0.7.1
 
 dev_dependencies:
   flutter_test:
@@ -23,6 +24,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   theme_tailor: ^3.1.1
   intl_utils: ^2.8.12
+
 
 flutter:
   uses-material-design: true
