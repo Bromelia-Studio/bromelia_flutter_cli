@@ -13,7 +13,3 @@ build-runner:
 # Watch for changes and regenerate code automatically
 build-runner-watch:
 	dart run build_runner watch --delete-conflicting-outputs
-
-# Clean generated files
-build-runner-clean:
-	dart run build_runner clean
