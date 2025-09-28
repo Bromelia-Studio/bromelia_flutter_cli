@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/localization/generated/l10n.dart';
 import '../../../../core/theme/palette.dart';
 
 class HomePage extends StatelessWidget {
@@ -12,7 +13,7 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Text(
-          'Hello World! 🌺',
+          S.of(context).helloWorld,
           style: TextStyle(
             color: context.palette.onBackground,
             fontSize: 18,
