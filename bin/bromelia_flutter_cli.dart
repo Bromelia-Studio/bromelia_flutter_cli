@@ -272,6 +272,7 @@ class TemplateProcessor {
         'pubspec.yaml',
         'analysis_options.yaml',
         'README.md',
+        'Makefile',
       ];
 
       for (final item in essentialItems) {
