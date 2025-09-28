@@ -83,7 +83,7 @@ class ProgressIndicator {
     if (success) {
       stdout.write('\r${Colors.green}✓${Colors.reset} $_message\n');
     } else {
-      stdout.write('\r${Colors.red}✗${Colors.reset} $_message failed\n');
+      stdout.write('\r${Colors.red}✕${Colors.reset} $_message failed\n');
     }
   }
 }
@@ -223,6 +223,7 @@ class TemplateProcessor {
     }
   }
 
+  // ignore: unused_element
   Future<void> _executeBuildRunner(Directory projectDir) async {
     try {
       // Check if build_runner is in dependencies
@@ -336,30 +337,18 @@ class TemplateProcessor {
   }
 
   Future<void> _processTemplateFiles(Directory projectDir) async {
-    // Only process files in lib/, assets/, fonts/, and root config files
-    final filesToProcess = [path.join(projectDir.path, 'pubspec.yaml'), path.join(projectDir.path, 'analysis_options.yaml')];
-
-    // Process lib/ directory
-    await _processDirectoryFiles(Directory(path.join(projectDir.path, 'lib')));
-
-    // Process assets/ directory if exists
-    final assetsDir = Directory(path.join(projectDir.path, 'assets'));
-    if (await assetsDir.exists()) {
-      await _processDirectoryFiles(assetsDir);
-    }
-
-    // Process fonts/ directory if exists
-    final fontsDir = Directory(path.join(projectDir.path, 'fonts'));
-    if (await fontsDir.exists()) {
-      await _processDirectoryFiles(fontsDir);
-    }
-
-    // Process root config files
-    for (final filePath in filesToProcess) {
-      final file = File(filePath);
-      if (await file.exists() && _shouldProcessFile(filePath)) {
-        await _processFile(file);
-      }
+    // Process only the 'name' field in pubspec.yaml
+    final pubspecPath = path.join(projectDir.path, 'pubspec.yaml');
+    final pubspecFile = File(pubspecPath);
+    if (await pubspecFile.exists()) {
+      final lines = await pubspecFile.readAsLines();
+      final updatedLines = lines.map((line) {
+        if (line.trim().startsWith('name:')) {
+          return 'name: $projectName';
+        }
+        return line;
+      }).toList();
+      await pubspecFile.writeAsString(updatedLines.join('\n'));
     }
   }
 
@@ -411,6 +400,7 @@ class BromeliaCli {
       ..addFlag('version', abbr: 'v', help: 'Show version information');
 
     // Setup create command
+    // ignore: unused_local_variable
     final createCommand = parser.commands['create']!
       ..addOption(
         'org',
@@ -547,9 +537,6 @@ class BromeliaCli {
 
   static Future<void> _createProject(String projectName, String organization, List<String> platforms) async {
     try {
-      // Get template path (absolute path to template folder in CLI project)
-      final scriptPath = Platform.script.toFilePath();
-      final cliDir = Directory(scriptPath).parent.parent.path; // Go up from bin/ to project root
       final templatePath = await getTemplatePath();
       final destinationPath = path.join(Directory.current.path, projectName);
 
