@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:isolate';
 import 'package:args/args.dart';
 import 'package:path/path.dart' as path;
 
@@ -36,7 +37,7 @@ class Logger {
   }
 
   static void error(String message) {
-    print('${Colors.red}✗${Colors.reset} $message');
+    print('${Colors.red}✕${Colors.reset} $message');
   }
 
   static void warning(String message) {
@@ -52,12 +53,12 @@ class Logger {
   }
 
   static void progressDone() {
-    stdout.write('\r${Colors.green}✓${Colors.reset}');
+    stdout.write('\r${Colors.green}⚠${Colors.reset}');
     print('');
   }
 
   static void progressError() {
-    stdout.write('\r${Colors.red}✗${Colors.reset}');
+    stdout.write('\r${Colors.red}✕${Colors.reset}');
     print('');
   }
 }
@@ -135,7 +136,7 @@ class TemplateProcessor {
       await _executeFlutterPubGet(destinationDir);
 
       // Step 6: Execute dart run build_runner build -d
-      await _executeBuildRunner(destinationDir);
+      // await _executeBuildRunner(destinationDir);
 
       progress.stop();
       return true;
@@ -200,7 +201,12 @@ class TemplateProcessor {
 
   Future<void> _executeFlutterPubGet(Directory projectDir) async {
     try {
-      final result = await Process.run('flutter', ['pub', 'get'], workingDirectory: projectDir.path, runInShell: true);
+      final result = await Process.run(
+        'flutter',
+        ['pub', 'get'],
+        workingDirectory: projectDir.path,
+        runInShell: true,
+      );
 
       if (result.exitCode != 0) {
         throw ProjectCreationException(
@@ -406,9 +412,24 @@ class BromeliaCli {
 
     // Setup create command
     final createCommand = parser.commands['create']!
-      ..addOption('org', abbr: 'o', help: 'Organization domain (e.g., com.example)', mandatory: true)
-      ..addOption('platforms', abbr: 'p', help: 'Target platforms (comma-separated: android,ios,web,windows,macos,linux)', defaultsTo: '')
-      ..addFlag('help', abbr: 'h', help: 'Show help for create command');
+      ..addOption(
+        'org',
+        abbr: 'o',
+        help: 'Organization domain (e.g., com.example)',
+        mandatory: false,
+        defaultsTo: 'com.example',
+      )
+      ..addOption(
+        'platforms',
+        abbr: 'p',
+        help: 'Target platforms (comma-separated: android,ios,web,windows,macos,linux)',
+        defaultsTo: '',
+      )
+      ..addFlag(
+        'help',
+        abbr: 'h',
+        help: 'Show help for create command',
+      );
 
     try {
       final results = parser.parse(arguments);
@@ -441,6 +462,25 @@ class BromeliaCli {
       _showHelp(parser);
       exit(1);
     }
+  }
+
+  // Helper method to show text in a colored box with padding in the terminal
+  static void _showInBox(String text, String color) {
+    // Add padding to the text
+    final paddedText = '  $text  ';
+    final horizontal = '─';
+    final vertical = '│';
+    final topLeft = '┌';
+    final topRight = '┐';
+    final bottomLeft = '└';
+    final bottomRight = '┘';
+    final line = horizontal * paddedText.length;
+
+    print('');
+    print('$color$topLeft$line$topRight${Colors.reset}');
+    print('$color$vertical${Colors.reset}$paddedText$color$vertical${Colors.reset}');
+    print('$color$bottomLeft$line$bottomRight${Colors.reset}');
+    print('');
   }
 
   static Future<void> _handleCreateCommand(ArgResults results) async {
@@ -496,12 +536,21 @@ class BromeliaCli {
     await _createProject(projectName, organization, platforms);
   }
 
+  static Future<String> getTemplatePath() async {
+    final uri = Uri.parse('package:bromelia_cli/template/flutter_app');
+    final resolved = await Isolate.resolvePackageUri(uri);
+    if (resolved == null) {
+      throw Exception('Could not resolve template path.');
+    }
+    return resolved.toFilePath();
+  }
+
   static Future<void> _createProject(String projectName, String organization, List<String> platforms) async {
     try {
       // Get template path (absolute path to template folder in CLI project)
       final scriptPath = Platform.script.toFilePath();
       final cliDir = Directory(scriptPath).parent.parent.path; // Go up from bin/ to project root
-      final templatePath = path.join(cliDir, 'template', 'flutter_app');
+      final templatePath = await getTemplatePath();
       final destinationPath = path.join(Directory.current.path, projectName);
 
       final processor = TemplateProcessor(templatePath: templatePath, projectName: projectName, organization: organization, platforms: platforms);
@@ -542,7 +591,7 @@ class BromeliaCli {
   }
 
   static void _showVersion() {
-    print('${Colors.bold}Bromelia CLI${Colors.reset} version $version');
+    _showInBox('Bromelia CLI version $version', '\x1B[38;5;208m'); // 208 is orange in 256-color terminals
   }
 
   static void _showHelp(ArgParser parser) {
