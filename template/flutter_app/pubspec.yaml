@@ -34,5 +34,8 @@ flutter_intl:
   arb_dir: lib/core/localization
   output_dir: lib/core/localization/generated
 
+assets:
+  - assets/images/
+
 
 
