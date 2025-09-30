@@ -491,11 +491,10 @@ class BromeliaCli {
   }
 
   static Future<String> getTemplatePath() async {
-    final uri = Uri.parse('package:bromelia_cli/template/flutter_app');
-    final resolved = await Isolate.resolvePackageUri(uri);
-    if (resolved == null) {
-      throw Exception('Could not resolve template path.');
-    }
+    final resolved = Directory.current.uri.resolve('template/flutter_app/');
+    // if (resolved == null) {
+    //   throw Exception('Could not resolve template path.');
+    // }
     return resolved.toFilePath();
   }
 

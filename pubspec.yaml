@@ -16,3 +16,6 @@ dev_dependencies:
 
 executables:
   bromelia_cli: bromelia_cli
+
+assets:
+   - templates/flutter_app/
