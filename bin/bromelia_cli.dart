@@ -351,42 +351,6 @@ class TemplateProcessor {
       await pubspecFile.writeAsString(updatedLines.join('\n'));
     }
   }
-
-  Future<void> _processDirectoryFiles(Directory directory) async {
-    if (!await directory.exists()) return;
-
-    await for (final entity in directory.list(recursive: true)) {
-      if (entity is File && _shouldProcessFile(entity.path)) {
-        await _processFile(entity);
-      }
-    }
-  }
-
-  bool _shouldProcessFile(String filePath) {
-    final ext = path.extension(filePath).toLowerCase();
-    return ['.dart', '.yaml', '.yml', '.json', '.md', '.txt'].contains(ext);
-  }
-
-  Future<void> _processFile(File file) async {
-    try {
-      String content = await file.readAsString();
-
-      // Replace template variables
-      content = content
-          .replaceAll('{{PROJECT_NAME}}', projectName)
-          .replaceAll('{{ORGANIZATION}}', organization)
-          .replaceAll('{{PACKAGE_NAME}}', _getPackageName())
-          .replaceAll('{{PLATFORMS}}', platforms.join(', '));
-
-      await file.writeAsString(content);
-    } catch (e) {
-      // Skip files that can't be processed as text
-    }
-  }
-
-  String _getPackageName() {
-    return '$organization.$projectName'.toLowerCase().replaceAll('-', '_');
-  }
 }
 
 // Main CLI class
