@@ -1,5 +1,5 @@
 
-![App Screenshot](https://via.placeholder.com/468x300?text=App+Screenshot+Here)
+![App Screenshot](https://github.com/Bromelia-Studio/bromelia_flutter_cli/blob/main/assets/bromelia-cli-hero.png)
 
 
 # Bromelia CLI
