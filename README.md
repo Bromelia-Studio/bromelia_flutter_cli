@@ -15,6 +15,7 @@ The generated project comes pre-configured with:
 - **Theming** with [theme_tailor](https://pub.dev/packages/theme_tailor)
 - **Localization** (intl, flutter_localizations)
 - **Responsiveness** using [responsive_builder](https://pub.dev/packages/responsive_builder)
+- A **Makefile** is included in the project to simplify common Flutter development tasks.
 
 ## 🚀 Installation
 ```sh
