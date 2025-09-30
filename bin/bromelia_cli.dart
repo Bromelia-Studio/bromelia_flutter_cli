@@ -91,18 +91,16 @@ class ProgressIndicator {
 
 // Template processor class
 class TemplateProcessor {
-  final String templatePath;
   final String projectName;
   final String organization;
   final List<String> platforms;
 
   TemplateProcessor({
-    required this.templatePath,
     required this.projectName,
     required this.organization,
     required this.platforms,
   });
-  
+
   Future<bool> processTemplate(String destinationPath) async {
     final destinationDir = Directory(destinationPath);
     final progress = ProgressIndicator();
@@ -148,42 +146,23 @@ class TemplateProcessor {
     }
   }
 
-  /// Resolves the template zip path using Isolate to get the package location
   Future<String> _resolveTemplateZipPath() async {
-    // Use script location
-    final scriptPath = Platform.script.toFilePath();
-    final scriptDir = path.dirname(scriptPath);
-    
-    Logger.info('Script path: $scriptPath');
-    Logger.info('Script dir: $scriptDir');
-    Logger.info('Current dir: ${Directory.current.path}');
-    
-    // Try multiple possible locations
-    final possiblePaths = [
-      // When run from bin/
-      path.join(scriptDir, '..', 'lib', 'template', 'flutter_app.zip'),
-      // When run from compiled executable in the same directory as lib/
-      path.join(scriptDir, 'lib', 'template', 'flutter_app.zip'),
-      // When run from project root
-      path.join(scriptDir, 'template', 'flutter_app.zip'),
-      // Direct lib path
-      path.join(Directory.current.path, 'lib', 'template', 'flutter_app.zip'),
-    ];
+    // Use Isolate.resolvePackageUri to resolve package URI
+    final templateUri = Uri.parse('package:bromelia_cli/template/flutter_app.zip');
 
-    for (final zipPath in possiblePaths) {
-      final normalizedPath = path.normalize(zipPath);
-      Logger.info('Trying: $normalizedPath');
-      if (await File(normalizedPath).exists()) {
-        Logger.success('Found template at: $normalizedPath');
-        return normalizedPath;
-      }
+    final resolvedUri = await Isolate.resolvePackageUri(templateUri);
+
+    if (resolvedUri == null) {
+      throw Exception('Failed to resolve template URI: $templateUri');
     }
 
-    throw ProjectCreationException(
-      'Template zip file not found',
-      'Expected template at one of:\n${possiblePaths.map((p) => '  - $p').join('\n')}\n'
-      'Please ensure the template is packaged correctly with your CLI.',
-    );
+    final templatePath = resolvedUri.toFilePath();
+
+    if (!await File(templatePath).exists()) {
+      throw Exception('Template file not found at: $templatePath');
+    }
+
+    return templatePath;
   }
 
   Future<void> _checkFlutterInstallation() async {
@@ -307,21 +286,15 @@ class TemplateProcessor {
 
   Future<Directory> unzipTemplate(String zipPath) async {
     final tempDir = await Directory.systemTemp.createTemp('bromelia_template_');
-    
-    Logger.info('Unzipping template from: $zipPath');
-    Logger.info('Temp directory: ${tempDir.path}');
 
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
-    
-    Logger.info('Zip contains ${archive.length} files');
 
     for (final file in archive) {
       // Skip __MACOSX files
       if (file.name.startsWith('__MACOSX')) continue;
-      
+
       final filePath = path.join(tempDir.path, file.name);
-      Logger.info('Extracting: ${file.name}');
       if (file.isFile) {
         final outFile = File(filePath);
         await outFile.create(recursive: true);
@@ -334,20 +307,15 @@ class TemplateProcessor {
     // Return the flutter_app subdirectory, not the temp root
     final flutterAppDir = Directory(path.join(tempDir.path, 'flutter_app'));
     if (await flutterAppDir.exists()) {
-      Logger.success('Template extracted to: ${flutterAppDir.path}');
       return flutterAppDir;
     }
-    
+
     // Fallback: return temp dir if flutter_app doesn't exist
-    Logger.warning('flutter_app directory not found, using temp root');
     return tempDir;
   }
 
   Future<void> _copyEssentialFiles(Directory source, Directory destination) async {
     try {
-      Logger.info('Copying from: ${source.path}');
-      Logger.info('Copying to: ${destination.path}');
-      
       // Define files and folders to copy from template
       final essentialItems = [
         'lib',
@@ -363,10 +331,6 @@ class TemplateProcessor {
         final sourcePath = path.join(source.path, item);
         final destinationPath = path.join(destination.path, item);
 
-        Logger.info('Processing: $item');
-        Logger.info('  Source: $sourcePath');
-        Logger.info('  Exists: ${await File(sourcePath).exists() || await Directory(sourcePath).exists()}');
-
         // Delete existing destination before copying
         if (await Directory(destinationPath).exists()) {
           await Directory(destinationPath).delete(recursive: true);
@@ -377,13 +341,9 @@ class TemplateProcessor {
         // Now copy from template
         if (await File(sourcePath).exists()) {
           await File(sourcePath).copy(destinationPath);
-          Logger.success('  Copied file: $item');
         } else if (await Directory(sourcePath).exists()) {
           await _copyDirectoryRecursive(Directory(sourcePath), Directory(destinationPath));
-          Logger.success('  Copied directory: $item');
-        } else {
-          Logger.warning('  Skipped (not found): $item');
-        }
+        } else {}
       }
     } catch (e) {
       throw ProjectCreationException(
@@ -575,18 +535,11 @@ class BromeliaCli {
     await _createProject(projectName, organization, platforms);
   }
 
-  static Future<String> getTemplatePath() async {
-    final resolved = Directory.current.uri.resolve('template/flutter_app/');
-    return resolved.toFilePath();
-  }
-
   static Future<void> _createProject(String projectName, String organization, List<String> platforms) async {
     try {
-      final templatePath = await getTemplatePath();
       final destinationPath = path.join(Directory.current.path, projectName);
 
       final processor = TemplateProcessor(
-        templatePath: templatePath,
         projectName: projectName,
         organization: organization,
         platforms: platforms,
