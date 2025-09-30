@@ -16,6 +16,7 @@ include: package:lints/recommended.yaml
 formatter:
   trailing_commas: preserve
 
+
 # Uncomment the following section to specify additional rules.
 
 # linter:
