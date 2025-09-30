@@ -1,6 +1,6 @@
 name: bromelia_cli
 description: Bromelia CLI is a command-line tool for generating Flutter projects.
-version: 1.0.0
+version: 1.0.1
 repository: https://github.com/Bromelia-Studio/bromelia_flutter_cli
 
 environment:
