@@ -1,5 +1,5 @@
 name: bromelia_cli
-description: A sample command-line application with basic argument parsing.
+description: Bromelia CLI is a command-line tool for generating Flutter projects.
 version: 1.0.0
 repository: https://github.com/Bromelia-Studio/bromelia_flutter_cli
 
