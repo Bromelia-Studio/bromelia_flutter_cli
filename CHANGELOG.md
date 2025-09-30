@@ -1,3 +1,7 @@
+## 1.0.2
+
+- Fix template processing.
+
 ## 1.0.1
 
 - Update ReadMe.
