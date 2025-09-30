@@ -1,8 +1,10 @@
 
-![App Screenshot](https://github.com/Bromelia-Studio/bromelia_flutter_cli/blob/main/assets/bromelia-cli-hero.png)
+![App Screenshot](https://github.com/Bromelia-Studio/bromelia_flutter_cli/raw/main/assets/bromelia-cli-hero.png)
 
 
 # Bromelia CLI
+
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 
 Developed by [Bromelia](https://bromelia.io/) 🌺
 
@@ -53,12 +55,6 @@ bromelia_cli create --platforms web my_web_app
 - **Flutter not found**  
   Make sure Flutter is installed and available in your `PATH`.
 
-
-## 📄 License
-
-MIT
-
----
 
 **Happy coding!**
 
